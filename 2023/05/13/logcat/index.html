@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta><title>logcat - dushicai&#039;s blog</title><link rel="manifest" href="/manifest.json"><meta name="application-name" content="dushicai&#039;s blog"><meta name="msapplication-TileImage" content="/img/favicon.svg"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="dushicai&#039;s blog"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="description" content="猫咪不吃鱼:Android 日志系统分析 一、前言logcat 作为读取日志的工具，相当于client 的角色；在前两篇文章中，关于 logcat 如何与其他部分沟通获取日志信息的流程已经介绍的比较清晰，本文不在赘述，转而归纳一下 logcat 的一些常用指令，并对其中一些做详细分析 二、命令简介   选项 描述 eg    -s 输出指定 tag 的日志，相当于过滤器表达式 ‘*:S’ logc"><meta property="og:type" content="blog"><meta property="og:title" content="logcat"><meta property="og:url" content="https://dushicai.github.io/2023/05/13/logcat/"><meta property="og:site_name" content="dushicai&#039;s blog"><meta property="og:description" content="猫咪不吃鱼:Android 日志系统分析 一、前言logcat 作为读取日志的工具，相当于client 的角色；在前两篇文章中，关于 logcat 如何与其他部分沟通获取日志信息的流程已经介绍的比较清晰，本文不在赘述，转而归纳一下 logcat 的一些常用指令，并对其中一些做详细分析 二、命令简介   选项 描述 eg    -s 输出指定 tag 的日志，相当于过滤器表达式 ‘*:S’ logc"><meta property="og:locale" content="en_US"><meta property="og:image" content="https://dushicai.github.io/img/og_image.png"><meta property="article:published_time" content="2023-05-13T14:40:00.000Z"><meta property="article:modified_time" content="2023-05-15T06:40:22.197Z"><meta property="article:author" content="dushicai"><meta property="twitter:card" content="summary"><meta property="twitter:image:src" content="https://dushicai.github.io/img/og_image.png"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"https://dushicai.github.io/2023/05/13/logcat/"},"headline":"logcat","image":["https://dushicai.github.io/img/og_image.png"],"datePublished":"2023-05-13T14:40:00.000Z","dateModified":"2023-05-15T06:40:22.197Z","author":{"@type":"Person","name":"dushicai"},"publisher":{"@type":"Organization","name":"dushicai's blog","logo":{"@type":"ImageObject","url":null}},"description":"猫咪不吃鱼:Android 日志系统分析 一、前言logcat 作为读取日志的工具，相当于client 的角色；在前两篇文章中，关于 logcat 如何与其他部分沟通获取日志信息的流程已经介绍的比较清晰，本文不在赘述，转而归纳一下 logcat 的一些常用指令，并对其中一些做详细分析 二、命令简介   选项 描述 eg    -s 输出指定 tag 的日志，相当于过滤器表达式 ‘*:S’ logc"}</script><link rel="canonical" href="https://dushicai.github.io/2023/05/13/logcat/"><link rel="icon" href="/img/favicon.svg"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.0.0/css/all.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;600&amp;family=Source+Code+Pro"><link rel="stylesheet" href="/css/default.css"><style>body>.footer,body>.navbar,body>.section{opacity:0}</style><!--!--><!--!--><!--!--><!--!--><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.10.0/dist/css/lightgallery.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.8.1/dist/css/justifiedGallery.min.css"><!--!--><!--!--><style>.pace{-webkit-pointer-events:none;pointer-events:none;-webkit-user-select:none;-moz-user-select:none;user-select:none}.pace-inactive{display:none}.pace .pace-progress{background:#3273dc;position:fixed;z-index:2000;top:0;right:100%;width:100%;height:2px}</style><script src="https://cdn.jsdelivr.net/npm/pace-js@1.2.4/pace.min.js"></script><!--!--><!--!--><!-- hexo injector head_end start --><script>
+  (function () {
+      function switchTab() {
+          if (!location.hash) {
+            return;
+          }
+
+          const id = '#' + CSS.escape(location.hash.substring(1));
+          const $tabMenu = document.querySelector(`.tabs a[href="${id}"]`);
+          if (!$tabMenu) {
+            return;
+          }
+
+          const $tabMenuContainer = $tabMenu.parentElement.parentElement;
+          Array.from($tabMenuContainer.children).forEach($menu => $menu.classList.remove('is-active'));
+          Array.from($tabMenuContainer.querySelectorAll('a'))
+              .map($menu => document.getElementById($menu.getAttribute("href").substring(1)))
+              .forEach($content => $content.classList.add('is-hidden'));
+
+          if ($tabMenu) {
+              $tabMenu.parentElement.classList.add('is-active');
+          }
+          const $activeTab = document.querySelector(id);
+          if ($activeTab) {
+              $activeTab.classList.remove('is-hidden');
+          }
+      }
+      switchTab();
+      window.addEventListener('hashchange', switchTab, false);
+  })();
+  </script><!-- hexo injector head_end end --><meta name="generator" content="Hexo 6.1.0"></head><body class="is-2-column"><nav class="navbar navbar-main"><div class="container navbar-container"><div class="navbar-brand justify-content-center"><a class="navbar-item navbar-logo" href="/">dushicai&#039;s blog</a></div><div class="navbar-menu"><div class="navbar-start"><a class="navbar-item" href="/">Home</a><a class="navbar-item" href="/archives">Archives</a><a class="navbar-item" href="/categories">Categories</a><a class="navbar-item" href="/tags">Tags</a><a class="navbar-item" href="/about">About</a></div><div class="navbar-end"><a class="navbar-item" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus"><i class="fab fa-github"></i></a><a class="navbar-item search" title="Search" href="javascript:;"><i class="fas fa-search"></i></a></div></div></div></nav><section class="section"><div class="container"><div class="columns"><div class="column order-2 column-main is-8-tablet is-8-desktop is-8-widescreen"><div class="card"><article class="card-content article" role="article"><div class="article-meta is-size-7 is-uppercase level is-mobile"><div class="level-left"><span class="level-item">Posted&nbsp;<time dateTime="2023-05-13T14:40:00.000Z" title="5/13/2023, 10:40:00 PM">2023-05-13</time></span><span class="level-item">Updated&nbsp;<time dateTime="2023-05-15T06:40:22.197Z" title="5/15/2023, 2:40:22 PM">2023-05-15</time></span><span class="level-item">12 minutes read (About 1802 words)</span></div></div><h1 class="title is-3 is-size-4-mobile">logcat</h1><div class="content"><p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/26252ee91726">猫咪不吃鱼:Android 日志系统分析</a></p>
+<h3 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h3><p><strong>logcat</strong> 作为读取日志的工具，相当于client 的角色；在前两篇文章中，关于 <strong>logcat</strong> 如何与其他部分沟通获取日志信息的流程已经介绍的比较清晰，本文不在赘述，转而归纳一下 <strong>logcat</strong> 的一些常用指令，并对其中一些做详细分析</p>
+<h3 id="二、命令简介"><a href="#二、命令简介" class="headerlink" title="二、命令简介"></a>二、命令简介</h3><table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+<th>eg</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>-s</td>
+<td>输出指定 tag 的日志，相当于过滤器表达式 ‘*:S’</td>
+<td>logcat -s tag</td>
+</tr>
+<tr>
+<td>-f <file></td>
+<td>设置logcat 内容保存的位置，默认是stdout</td>
+<td>logcat -f sdcard&#x2F;log.txt</td>
+</tr>
+<tr>
+<td>-r <kbytes></td>
+<td>每输出 <kbytes> 时轮替日志文件，默认是16 必须配合 -f (暂不明白)</td>
+<td>logcat -f sdcard&#x2F;log.txt -r 1</td>
+</tr>
+<tr>
+<td>-n <count></td>
+<td>设置日志输出的最大数目, 需要 -r 参数</td>
+<td>暂不明白</td>
+</tr>
+<tr>
+<td>-v <format></td>
+<td>设置日志消息的输出格式。详见下文 <strong>格式化输出</strong></td>
+<td>logcat -v thread</td>
+</tr>
+<tr>
+<td>-D</td>
+<td>输出各个日志缓冲区之间的分隔线</td>
+<td>logcat -D …</td>
+</tr>
+<tr>
+<td>-c</td>
+<td>清除（清空）所选的缓冲区并退出，默认清除 main、system 和 crash</td>
+<td>logcat -c &#x2F; -b all -c</td>
+</tr>
+<tr>
+<td>-d</td>
+<td>将日志转储到屏幕并退出</td>
+<td>logcat -d &gt; log.txt</td>
+</tr>
+<tr>
+<td>-e <expr></td>
+<td>输出正则匹配的日志消息</td>
+<td>logcat -e 匹配数据 -m 5</td>
+</tr>
+<tr>
+<td>-m <count></td>
+<td>输出 <count> 行后退出</td>
+<td>……</td>
+</tr>
+<tr>
+<td>-t <count></td>
+<td>仅输出最新的行数，此选项包括 -d 功能</td>
+<td>logcat -t 5</td>
+</tr>
+<tr>
+<td>-t ‘<time>‘</td>
+<td>输出自指定时间以来的最新行，此选项包括 -d 功能</td>
+<td>logcat -t ‘01-26 20:52:41.820’</td>
+</tr>
+<tr>
+<td>-g</td>
+<td>获取指定日志缓冲区的大小并退出</td>
+<td>logcat -g</td>
+</tr>
+<tr>
+<td>-G</td>
+<td>设置日志环形缓冲区的大小，可以在结尾处添加 K 或 M</td>
+<td>logcat -G 2M</td>
+</tr>
+<tr>
+<td>-b</td>
+<td>加载可供查看的日志缓冲区，更多可见下文 <strong>日志缓冲区</strong></td>
+<td>logcat -b system</td>
+</tr>
+<tr>
+<td>-B</td>
+<td>以二进制文件形式输出日志</td>
+<td>……</td>
+</tr>
+<tr>
+<td>-S</td>
+<td>在输出中包含统计信息，以识别和定位日志垃圾信息发送者</td>
+<td>……</td>
+</tr>
+<tr>
+<td>–pid&#x3D;<pid></td>
+<td>仅输出来自给定 PID 的日志</td>
+<td>logcat –pid&#x3D;4355</td>
+</tr>
+</tbody></table>
+<span id="more"></span>
+
+<h3 id="三、日志缓冲区"><a href="#三、日志缓冲区" class="headerlink" title="三、日志缓冲区"></a>三、日志缓冲区</h3><p><strong>Android</strong> 日志系统为日志消息保留了多个环形缓冲区，但并非多有的日志消息都会发送到默认的环形缓冲区。这里可以采用 <strong>logcat -b</strong> 命令查看设备的其他缓冲区：</p>
+<table>
+<thead>
+<tr>
+<th>缓冲区</th>
+<th>描述</th>
+<th>eg</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>radio</td>
+<td>输出通信系统的日志，包含无线装置&#x2F;电话相关消息</td>
+<td>logcat -b radio</td>
+</tr>
+<tr>
+<td>events</td>
+<td>输出event模块的日志</td>
+<td>logcat -b events</td>
+</tr>
+<tr>
+<td>main</td>
+<td>主日志缓冲区(默认)，不包含系统和崩溃日志消息</td>
+<td>logcat -b main</td>
+</tr>
+<tr>
+<td>system</td>
+<td>输出系统日志</td>
+<td>logcat -b system</td>
+</tr>
+<tr>
+<td>crash</td>
+<td>输出崩溃日志</td>
+<td>logcat -b crash</td>
+</tr>
+<tr>
+<td>all</td>
+<td>输出所有缓冲区日志</td>
+<td>logcat -b all</td>
+</tr>
+<tr>
+<td>default</td>
+<td>输出main、system、crash缓冲区日志</td>
+<td>logcat -b default</td>
+</tr>
+</tbody></table>
+<p>如果需要查看内核空间日志信息，可采用如下几种方式查看：</p>
+<p>1、读取 <strong>&#x2F;proc&#x2F;kmsg</strong> ，命令如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adb shell cat /proc/kmsg</span><br></pre></td></tr></table></figure>
+
+<p>读取&#x2F;proc&#x2F;kmsg属于消费型读取，读取之后再次读取不会显示已经读取过的日志信息</p>
+<p>2、读取 <strong>&#x2F;dev&#x2F;kmsg</strong>，命令如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adb shell cat /dev/kmsg</span><br></pre></td></tr></table></figure>
+
+<p>读取&#x2F;dev&#x2F;kmsg会显示缓存区里面的所有日志信息。新写入的日志信息会不断累加到日志缓冲器中</p>
+<p>3、使用 <strong>dmesg</strong> 命令读取</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">adb shell dmesg</span><br></pre></td></tr></table></figure>
+
+<p>dmesg命令读取一次只显示一部分日志,非阻塞执行</p>
+<h3 id="四、格式化输出"><a href="#四、格式化输出" class="headerlink" title="四、格式化输出"></a>四、格式化输出</h3><p>使用 <strong>-v</strong> 命令来修改 <strong>log</strong> 的输出格式，以显示特定的元数据字段：</p>
+<table>
+<thead>
+<tr>
+<th>格式</th>
+<th>描述</th>
+<th>eg</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>brief</td>
+<td>显示优先级、标记以及发出消息的进程的 PID</td>
+<td>……</td>
+</tr>
+<tr>
+<td>long</td>
+<td>显示所有元数据字段，并使用空白行分隔消息</td>
+<td>……</td>
+</tr>
+<tr>
+<td>process</td>
+<td>仅显示 PID</td>
+<td>……</td>
+</tr>
+<tr>
+<td>raw</td>
+<td>显示不包含其他元数据字段的原始日志消息</td>
+<td>……</td>
+</tr>
+<tr>
+<td>tag</td>
+<td>仅显示优先级和标记</td>
+<td>……</td>
+</tr>
+<tr>
+<td>thread</td>
+<td>旧版格式，显示优先级、PID 以及发出消息的线程的 TID</td>
+<td>……</td>
+</tr>
+<tr>
+<td>threadtime</td>
+<td>（默认值）显示日期、调用时间、优先级、标记、PID 以及发出消息的线程的 TID</td>
+<td>……</td>
+</tr>
+<tr>
+<td>time</td>
+<td>显示日期、调用时间、优先级、标记以及发出消息的进程的 PID</td>
+<td>……</td>
+</tr>
+<tr>
+<td>color</td>
+<td>使用不同的颜色来显示每个优先级</td>
+<td>……</td>
+</tr>
+<tr>
+<td>descriptive</td>
+<td>显示日志缓冲区事件说明。此修饰符仅影响事件日志缓冲区消息，不会对其他非二进制文件缓冲区产生任何影响</td>
+<td>……</td>
+</tr>
+<tr>
+<td>epoch</td>
+<td>显示自 1970 年 1 月 1 日以来的时间（以秒为单位）</td>
+<td>……</td>
+</tr>
+<tr>
+<td>monotonic</td>
+<td>显示自上次启动以来的时间（以 CPU 秒为单位）</td>
+<td>……</td>
+</tr>
+<tr>
+<td>printable</td>
+<td>确保所有二进制日志记录内容都进行了转义</td>
+<td>……</td>
+</tr>
+<tr>
+<td>uid</td>
+<td>如果访问控制允许，则显示 UID 或记录的进程的 Android ID</td>
+<td>……</td>
+</tr>
+<tr>
+<td>usec</td>
+<td>显示精确到微秒的时间</td>
+<td>……</td>
+</tr>
+<tr>
+<td>UTC</td>
+<td>显示 UTC 时间</td>
+<td>……</td>
+</tr>
+<tr>
+<td>year</td>
+<td>将年份添加到显示的时间</td>
+<td>……</td>
+</tr>
+<tr>
+<td>zone</td>
+<td>将本地时区添加到显示的时间</td>
+<td>……</td>
+</tr>
+</tbody></table>
+<p><strong>优先级：</strong></p>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+<th>eg</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>V</td>
+<td>–Verbose(最低优先级)</td>
+<td>adb logcat *:v</td>
+</tr>
+<tr>
+<td>D</td>
+<td>– Debug</td>
+<td>adb logcat *:d</td>
+</tr>
+<tr>
+<td>I</td>
+<td>– Info</td>
+<td>adb logcat *:i</td>
+</tr>
+<tr>
+<td>W</td>
+<td>– Warning</td>
+<td>adb logcat *:w</td>
+</tr>
+<tr>
+<td>E</td>
+<td>– Error</td>
+<td>adb logcat *:e</td>
+</tr>
+<tr>
+<td>F</td>
+<td>– Fatal</td>
+<td>adb logcat *:f</td>
+</tr>
+<tr>
+<td>S</td>
+<td>– Silent</td>
+<td>adb logcat *:s</td>
+</tr>
+</tbody></table>
+<h3 id="五、logcat-f-命令详解"><a href="#五、logcat-f-命令详解" class="headerlink" title="五、logcat -f 命令详解"></a>五、logcat -f 命令详解</h3><p><strong>logcat -f</strong> 命令可以将日志消息输出到指定的文件中。这里我们需要确定的一件事是 <strong>logcat</strong> 作为客户端的角色，会将通过 <strong>liblog</strong> 获得的日志信息进行格式解析、格式化处理，而 <strong>liblog</strong> 库本身并不存在保存、解析的功能。这里来对 <strong>-f</strong> 指令做一下解析：</p>
+<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">logcat_main.cpp <span class="comment"># main()</span></span><br><span class="line">    ---&gt; logcat.cpp <span class="comment"># android_logcat_run_command()</span></span><br><span class="line">        ---&gt; <span class="title function_ invoke__">__logcat</span>()</span><br><span class="line">            &#123;</span><br><span class="line">                ......</span><br><span class="line"></span><br><span class="line">                <span class="keyword">case</span> <span class="string">&#x27;f&#x27;</span>:</span><br><span class="line">                    <span class="keyword">if</span> ((tail_time == log_time::<span class="variable constant_">EPOCH</span>) &amp;&amp; !tail_lines) &#123;</span><br><span class="line">                        tail_time = <span class="title function_ invoke__">lastLogTime</span>(optctx.optarg);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">// redirect output to a file</span></span><br><span class="line">                    context-&gt;outputFileName = optctx.optarg;   <span class="comment">//注释 ①</span></span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">                ......</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                <span class="title function_ invoke__">setupOutputAndSchedulingPolicy</span>()   <span class="comment">//注释 ②</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                 <span class="keyword">while</span> (...) &#123;   <span class="comment">//注释 ③</span></span><br><span class="line"></span><br><span class="line">                    <span class="keyword">int</span> ret = <span class="title function_ invoke__">android_logger_list_read</span>(logger_list, &amp;log_msg);</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (context-&gt;printBinary) &#123;</span><br><span class="line">                        <span class="title function_ invoke__">printBinary</span>(context, &amp;log_msg);</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="title function_ invoke__">processBuffer</span>(context, dev, &amp;log_msg);</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                ......</span><br><span class="line"></span><br><span class="line">            &#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="5-1-注释①-：解析-f-指令"><a href="#5-1-注释①-：解析-f-指令" class="headerlink" title="5.1 注释① ：解析 -f 指令"></a>5.1 注释① ：解析 -f 指令</h4><figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">case</span> <span class="string">&#x27;f&#x27;</span>:</span><br><span class="line">        <span class="keyword">if</span> ((tail_time == log_time::<span class="variable constant_">EPOCH</span>) &amp;&amp; !tail_lines) &#123;</span><br><span class="line">              tail_time = <span class="title function_ invoke__">lastLogTime</span>(optctx.optarg);</span><br><span class="line">          &#125;</span><br><span class="line">          <span class="comment">// redirect output to a file</span></span><br><span class="line">          context-&gt;outputFileName = optctx.optarg;   <span class="comment">//注释 ①</span></span><br><span class="line">          <span class="keyword">break</span>;</span><br></pre></td></tr></table></figure>
+
+<p>在 <strong>_logcat()</strong> 函数中解析 <strong>-f</strong> 指令，设置日志输出文件。例如 <strong>logcat -f sdcard&#x2F;log.txt</strong> ，则 <strong>context-&gt;outputFileName</strong> 赋值为 <strong>sdcard&#x2F;log.txt</strong>；</p>
+<h4 id="5-2-注释②-：设置输出路径"><a href="#5-2-注释②-：设置输出路径" class="headerlink" title="5.2 注释② ：设置输出路径"></a>5.2 注释② ：设置输出路径</h4><figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> void <span class="title function_ invoke__">setupOutputAndSchedulingPolicy</span>(</span><br><span class="line">    android_logcat_context_internal* context, <span class="type">bool</span> blocking) &#123;</span><br><span class="line"></span><br><span class="line">    <span class="title function_ invoke__">if</span> (!context<span class="punctuation">-&gt;</span>outputFileName) <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    ......</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 打开文件获得 fd </span></span><br><span class="line">    context<span class="punctuation">-&gt;</span>output_fd = <span class="title function_ invoke__">openLogFile</span>(context<span class="punctuation">-&gt;</span>outputFileName);</span><br><span class="line"></span><br><span class="line">    <span class="title function_ invoke__">if</span> (context<span class="punctuation">-&gt;</span>output_fd &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="title function_ invoke__">logcat_panic</span>(context, HELP_FALSE, <span class="string">&quot;couldn&#x27;t open output file&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="5-3-注释③-：写入日志"><a href="#5-3-注释③-：写入日志" class="headerlink" title="5.3 注释③ ：写入日志"></a>5.3 注释③ ：写入日志</h4><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span> (...) &#123;   </span><br><span class="line">                 <span class="comment">// 调用 liblog 库中的 android_logger_list_read 函数获取日志 </span></span><br><span class="line">     <span class="type">int</span> ret = <span class="built_in">android_logger_list_read</span>(logger_list, &amp;log_msg);</span><br><span class="line"></span><br><span class="line">     <span class="keyword">if</span> (context-&gt;printBinary) &#123;       </span><br><span class="line">                     <span class="comment">// 根据上面获取的文件 fd ,将日志消息写入文件</span></span><br><span class="line">         <span class="built_in">printBinary</span>(context, &amp;log_msg);</span><br><span class="line">     &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">         <span class="built_in">processBuffer</span>(context, dev, &amp;log_msg);</span><br><span class="line">     &#125;</span><br></pre></td></tr></table></figure>
+
+<p>以 <strong>printBinary()</strong> 函数为例：</p>
+<p><strong>logcat.cpp # printBinary() :</strong></p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">void <span class="title function_ invoke__">printBinary</span>(android_logcat_context_internal* context, <span class="keyword">struct</span> <span class="title class_">log_msg</span>* buf) &#123;</span><br><span class="line">    size_t size = buf<span class="punctuation">-&gt;</span><span class="title function_ invoke__">len</span>();</span><br><span class="line"></span><br><span class="line">    <span class="title function_ invoke__">TEMP_FAILURE_RETRY</span>(<span class="title function_ invoke__">write</span>(context<span class="punctuation">-&gt;</span>output_fd, buf, size));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p>[ 1 ] <a target="_blank" rel="noopener" href="https://www.jianshu.com/p/fe84e71896b4">Android物语：logcat</a><br>[ 2 ] <a target="_blank" rel="noopener" href="https://links.jianshu.com/go?to=https://blog.csdn.net/to_perfect/article/details/105705773%23t2">android调试——logcat详解</a><br>[ 3 ] <a target="_blank" rel="noopener" href="https://links.jianshu.com/go?to=https://bbs.pediy.com/thread-265059.htm">玩转Android10源码开发定制(12)内核篇之logcat输出内核日志</a></p>
+</div><div class="article-licensing box"><div class="licensing-title"><p>logcat</p><p><a href="https://dushicai.github.io/2023/05/13/logcat/">https://dushicai.github.io/2023/05/13/logcat/</a></p></div><div class="licensing-meta level is-mobile"><div class="level-left"><div class="level-item is-narrow"><div><h6>Author</h6><p>dushicai</p></div></div><div class="level-item is-narrow"><div><h6>Posted on</h6><p>2023-05-13</p></div></div><div class="level-item is-narrow"><div><h6>Updated on</h6><p>2023-05-15</p></div></div><div class="level-item is-narrow"><div><h6>Licensed under</h6><p><a class="icons" rel="noopener" target="_blank" title="Creative Commons" href="https://creativecommons.org/"><i class="icon fab fa-creative-commons"></i></a><a class="icons" rel="noopener" target="_blank" title="Attribution" href="https://creativecommons.org/licenses/by/4.0/"><i class="icon fab fa-creative-commons-by"></i></a><a class="icons" rel="noopener" target="_blank" title="Noncommercial" href="https://creativecommons.org/licenses/by-nc/4.0/"><i class="icon fab fa-creative-commons-nc"></i></a></p></div></div></div></div></div><!--!--></article></div><!--!--><nav class="post-navigation mt-4 level is-mobile"><div class="level-start"><a class="article-nav-prev level level-item link-muted" href="/2023/05/15/wsl2/"><i class="level-item fas fa-chevron-left"></i><span class="level-item">wsl2</span></a></div><div class="level-end"><a class="article-nav-next level level-item link-muted" href="/2023/05/12/adb/"><span class="level-item">adb</span><i class="level-item fas fa-chevron-right"></i></a></div></nav><!--!--></div><div class="column column-left is-4-tablet is-4-desktop is-4-widescreen  order-1"><div class="card widget" data-type="profile"><div class="card-content"><nav class="level"><div class="level-item has-text-centered flex-shrink-1"><div><figure class="image is-128x128 mx-auto mb-2"><img class="avatar is-rounded" src="/image/avatar.png" alt="杜啊杜阿杜"></figure><p class="title is-size-4 is-block" style="line-height:inherit;">杜啊杜阿杜</p><p class="is-size-6 is-block">米其林摸鱼大师</p><p class="is-size-6 is-flex justify-content-center"><i class="fas fa-map-marker-alt mr-1"></i><span>CDC</span></p></div></div></nav><nav class="level is-mobile"><div class="level-item has-text-centered is-marginless"><div><p class="heading">Posts</p><a href="/archives"><p class="title">22</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">Categories</p><a href="/categories"><p class="title">0</p></a></div></div><div class="level-item has-text-centered is-marginless"><div><p class="heading">Tags</p><a href="/tags"><p class="title">0</p></a></div></div></nav><div class="level"><a class="level-item button is-primary is-rounded" href="https://github.com/dushicai" target="_blank" rel="noopener">Follow</a></div><div class="level is-mobile is-multiline"><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Github" href="https://github.com/dushicai"><i class="fab fa-github"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Facebook" href="https://facebook.com"><i class="fab fa-facebook"></i></a><a class="level-item button is-transparent is-marginless" target="_blank" rel="noopener" title="Twitter" href="https://twitter.com"><i class="fab fa-twitter"></i></a></div></div></div><!--!--><div class="card widget" data-type="links"><div class="card-content"><div class="menu"><h3 class="menu-label">Links</h3><ul class="menu-list"><li><a class="level is-mobile" href="https://github.com/dushicai" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Github</span></span><span class="level-right"><span class="level-item tag">github.com</span></span></a></li><li><a class="level is-mobile" href="https://dushicai.github.io/" target="_blank" rel="noopener"><span class="level-left"><span class="level-item">Pages</span></span><span class="level-right"><span class="level-item tag">dushicai.github.io</span></span></a></li></ul></div></div></div><!--!--><div class="card widget" data-type="recent-posts"><div class="card-content"><h3 class="menu-label">Recents</h3><article class="media"><div class="media-content"><p class="date"><time dateTime="2023-05-15T05:30:00.000Z">2023-05-15</time></p><p class="title"><a href="/2023/05/15/git/">git</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2023-05-15T05:00:00.000Z">2023-05-15</time></p><p class="title"><a href="/2023/05/15/wsl2/">wsl2</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2023-05-13T14:40:00.000Z">2023-05-13</time></p><p class="title"><a href="/2023/05/13/logcat/">logcat</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2023-05-12T07:00:00.000Z">2023-05-12</time></p><p class="title"><a href="/2023/05/12/adb/">adb</a></p></div></article><article class="media"><div class="media-content"><p class="date"><time dateTime="2023-05-12T07:00:00.000Z">2023-05-12</time></p><p class="title"><a href="/2023/05/12/repo/">repo</a></p></div></article></div></div><div class="card widget" data-type="archives"><div class="card-content"><div class="menu"><h3 class="menu-label">Archives</h3><ul class="menu-list"><li><a class="level is-mobile" href="/archives/2023/"><span class="level-start"><span class="level-item">2023</span></span><span class="level-end"><span class="level-item tag">8</span></span></a></li><li><a class="level is-mobile" href="/archives/2022/"><span class="level-start"><span class="level-item">2022</span></span><span class="level-end"><span class="level-item tag">14</span></span></a></li></ul></div></div></div><!--!--></div><!--!--></div></div></section><footer class="footer"><div class="container"><div class="level"><div class="level-start"><a class="footer-logo is-block mb-2" href="/">dushicai&#039;s blog</a><p class="is-size-7"><span>&copy; 2023 dushicai</span>  Powered by <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a> &amp; <a href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank" rel="noopener">Icarus</a></p><p class="is-size-7">© 2019</p></div><div class="level-end"><div class="field has-addons"><p class="control"><a class="button is-transparent is-large" target="_blank" rel="noopener" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus"><i class="fab fa-github"></i></a></p></div></div></div></div></footer><script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script><script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script><script>moment.locale("en");</script><script>var IcarusThemeSettings = {
+            article: {
+                highlight: {
+                    clipboard: true,
+                    fold: 'unfolded'
+                }
+            }
+        };</script><script src="/js/column.js"></script><script src="/js/animation.js"></script><a id="back-to-top" title="Back to top" href="javascript:;"><i class="fas fa-chevron-up"></i></a><script src="/js/back_to_top.js" defer></script><!--!--><!--!--><!--!--><script src="https://cdn.jsdelivr.net/npm/cookieconsent@3.1.1/build/cookieconsent.min.js" defer></script><script>window.addEventListener("load", () => {
+      window.cookieconsent.initialise({
+        type: "info",
+        theme: "edgeless",
+        static: false,
+        position: "bottom-left",
+        content: {
+          message: "This website uses cookies to improve your experience.",
+          dismiss: "Got it!",
+          allow: "Allow cookies",
+          deny: "Decline",
+          link: "Learn more",
+          policy: "Cookie Policy",
+          href: "https://www.cookiesandyou.com/",
+        },
+        palette: {
+          popup: {
+            background: "#edeff5",
+            text: "#838391"
+          },
+          button: {
+            background: "#4b81e8"
+          },
+        },
+      });
+    });</script><script src="https://cdn.jsdelivr.net/npm/lightgallery@1.10.0/dist/js/lightgallery.min.js" defer></script><script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.8.1/dist/js/jquery.justifiedGallery.min.js" defer></script><script>window.addEventListener("load", () => {
+            if (typeof $.fn.lightGallery === 'function') {
+                $('.article').lightGallery({ selector: '.gallery-item' });
+            }
+            if (typeof $.fn.justifiedGallery === 'function') {
+                if ($('.justified-gallery > p > .gallery-item').length) {
+                    $('.justified-gallery > p > .gallery-item').unwrap();
+                }
+                $('.justified-gallery').justifiedGallery();
+            }
+        });</script><!--!--><!--!--><!--!--><!--!--><!--!--><script src="/js/main.js" defer></script><div class="searchbox"><div class="searchbox-container"><div class="searchbox-header"><div class="searchbox-input-container"><input class="searchbox-input" type="text" placeholder="Type something..."></div><a class="searchbox-close" href="javascript:;">×</a></div><div class="searchbox-body"></div></div></div><script src="/js/insight.js" defer></script><script>document.addEventListener('DOMContentLoaded', function () {
+            loadInsight({"contentUrl":"/content.json"}, {"hint":"Type something...","untitled":"(Untitled)","posts":"Posts","pages":"Pages","categories":"Categories","tags":"Tags"});
+        });</script></body></html>
